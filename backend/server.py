@@ -133,7 +133,12 @@ CITY_COORDINATES = {
     "manchester": (53.4808, -2.2426),
     "birmingham": (52.4862, -1.8904),
     "glasgow": (55.8642, -4.2518),
-    "liverpool": (53.4084, -2.9916)
+    "liverpool": (53.4084, -2.9916),
+    "sydney": (-33.8688, 151.2093),
+    "melbourne": (-37.8136, 144.9631),
+    "brisbane": (-27.4698, 153.0251),
+    "perth": (-31.9505, 115.8605),
+    "adelaide": (-34.9285, 138.6007)
 }
 
 def get_location_coordinates(location_str):
