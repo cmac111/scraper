@@ -4,7 +4,6 @@ import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
-const GOOGLE_MAPS_API_KEY = "AIzaSyCAwbHIFnRrswP38tnmYeR24cp0DPhLs2w";
 
 const App = () => {
   const [darkMode, setDarkMode] = useState(false);
