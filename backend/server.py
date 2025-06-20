@@ -9,10 +9,8 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 import uuid
 from datetime import datetime
-import googlemaps
+import random
 import json
-import requests
-from urllib.parse import urlencode
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -21,9 +19,6 @@ load_dotenv(ROOT_DIR / '.env')
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
-
-# Google Maps API Key
-GOOGLE_MAPS_API_KEY = "AIzaSyCAwbHIFnRrswP38tnmYeR24cp0DPhLs2w"
 
 # Create the main app without a prefix
 app = FastAPI()
@@ -67,6 +62,191 @@ class SearchResponse(BaseModel):
     total_count: int
     search_center: dict
 
+# Business name generators by category
+BUSINESS_TEMPLATES = {
+    "restaurants": [
+        "{location} Grill", "{location} Bistro", "The {adjective} Kitchen", "{name}'s Restaurant",
+        "{location} Diner", "Taste of {location}", "{adjective} Eats", "{name}'s Cafe",
+        "{location} Pizza", "Golden {food} Restaurant", "{adjective} {food} House"
+    ],
+    "plumbers": [
+        "{location} Plumbing", "{name} Plumbing Services", "Quick Fix Plumbing", 
+        "{adjective} Drain Solutions", "{location} Water Works", "Pro Plumb {location}",
+        "{name}'s Plumbing", "Reliable Plumbing Co.", "{location} Pipe Masters"
+    ],
+    "dentists": [
+        "{location} Dental Care", "Dr. {name} Dentistry", "{adjective} Smile Dental",
+        "{location} Family Dentist", "Bright Smile Dental", "{name} Dental Clinic",
+        "{location} Orthodontics", "Perfect Teeth Dental", "Gentle Care Dentistry"
+    ],
+    "lawyers": [
+        "{name} Law Firm", "{location} Legal Services", "{adjective} Legal Associates",
+        "{name} & Partners", "{location} Law Office", "Justice Law Firm",
+        "{name} Attorney at Law", "Legal Solutions {location}", "Premier Law Group"
+    ],
+    "hair salons": [
+        "{location} Hair Studio", "{adjective} Salon", "{name}'s Hair Design",
+        "Styling Station", "{location} Beauty Bar", "Hair Masters", "Chic Cuts",
+        "{adjective} Hair Lounge", "Glamour Salon", "{name}'s Styling"
+    ],
+    "auto repair": [
+        "{location} Auto Repair", "{name}'s Garage", "Quick Fix Auto", 
+        "{adjective} Motors", "{location} Car Care", "Pro Auto Service",
+        "Reliable Auto Repair", "{name} Automotive", "{location} Auto Works"
+    ],
+    "coffee shops": [
+        "{location} Coffee Co.", "The {adjective} Bean", "{name}'s Cafe",
+        "Daily Grind Coffee", "{location} Roasters", "Brew House",
+        "{adjective} Coffee", "Steam & Bean", "Corner Cafe"
+    ]
+}
+
+ADJECTIVES = ["Premium", "Elite", "Professional", "Quality", "Expert", "Superior", "Advanced", "Modern", "Classic", "Reliable"]
+NAMES = ["Johnson", "Smith", "Williams", "Brown", "Davis", "Miller", "Wilson", "Moore", "Taylor", "Anderson", "Thomas", "Jackson", "White", "Harris", "Martin", "Thompson", "Garcia", "Martinez", "Robinson", "Clark"]
+STREETS = ["Main St", "Oak Ave", "Pine St", "Maple Dr", "Cedar Ln", "Elm St", "Park Ave", "First St", "Second Ave", "Third St", "King St", "Queen St", "Church St", "Mill St", "High St"]
+
+# Location coordinates (lat, lng) for major cities
+CITY_COORDINATES = {
+    "toronto": (43.6532, -79.3832),
+    "vancouver": (49.2827, -123.1207),
+    "montreal": (45.5017, -73.5673),
+    "calgary": (51.0447, -114.0719),
+    "ottawa": (45.4215, -75.6972),
+    "edmonton": (53.5461, -113.4938),
+    "mississauga": (43.5890, -79.6441),
+    "winnipeg": (49.8951, -97.1384),
+    "quebec city": (46.8139, -71.2080),
+    "hamilton": (43.2557, -79.8711),
+    "new york": (40.7128, -74.0060),
+    "los angeles": (34.0522, -118.2437),
+    "chicago": (41.8781, -87.6298),
+    "houston": (29.7604, -95.3698),
+    "phoenix": (33.4484, -112.0740),
+    "philadelphia": (39.9526, -75.1652),
+    "san antonio": (29.4241, -98.4936),
+    "san diego": (32.7157, -117.1611),
+    "dallas": (32.7767, -96.7970),
+    "san jose": (37.3382, -121.8863),
+    "london": (51.5074, -0.1278),
+    "manchester": (53.4808, -2.2426),
+    "birmingham": (52.4862, -1.8904),
+    "glasgow": (55.8642, -4.2518),
+    "liverpool": (53.4084, -2.9916)
+}
+
+def get_location_coordinates(location_str):
+    """Get coordinates for a location string"""
+    location_lower = location_str.lower()
+    
+    # Try exact matches first
+    for city, coords in CITY_COORDINATES.items():
+        if city in location_lower:
+            return coords
+    
+    # Default to Toronto if not found
+    return CITY_COORDINATES["toronto"]
+
+def generate_business_name(query, location):
+    """Generate a realistic business name based on query and location"""
+    query_lower = query.lower()
+    location_name = location.split(',')[0].strip()  # Extract city name
+    
+    # Map common queries to categories
+    category = "restaurants"  # default
+    if any(word in query_lower for word in ["plumber", "plumbing", "drain", "pipe"]):
+        category = "plumbers"
+    elif any(word in query_lower for word in ["dentist", "dental", "orthodontist"]):
+        category = "dentists"
+    elif any(word in query_lower for word in ["lawyer", "attorney", "legal"]):
+        category = "lawyers"
+    elif any(word in query_lower for word in ["hair", "salon", "barber", "styling"]):
+        category = "hair salons"
+    elif any(word in query_lower for word in ["auto", "car", "mechanic", "garage", "repair"]):
+        category = "auto repair"
+    elif any(word in query_lower for word in ["coffee", "cafe", "espresso"]):
+        category = "coffee shops"
+    elif any(word in query_lower for word in ["restaurant", "food", "dining", "pizza", "burger"]):
+        category = "restaurants"
+    
+    templates = BUSINESS_TEMPLATES.get(category, BUSINESS_TEMPLATES["restaurants"])
+    template = random.choice(templates)
+    
+    return template.format(
+        location=location_name,
+        adjective=random.choice(ADJECTIVES),
+        name=random.choice(NAMES),
+        food=random.choice(["Pizza", "Burger", "Sushi", "Thai", "Italian", "Mexican"])
+    )
+
+def generate_mock_businesses(search_request: SearchRequest):
+    """Generate mock business data based on search parameters"""
+    center_lat, center_lng = get_location_coordinates(search_request.location)
+    
+    # Generate 5-25 businesses
+    num_businesses = random.randint(5, 25)
+    businesses = []
+    
+    # Radius in degrees (approximate)
+    radius_degrees = (search_request.radius / 1000) * 0.009  # Rough conversion
+    
+    for i in range(num_businesses):
+        # Generate random coordinates within radius
+        lat_offset = random.uniform(-radius_degrees, radius_degrees)
+        lng_offset = random.uniform(-radius_degrees, radius_degrees)
+        
+        business_lat = center_lat + lat_offset
+        business_lng = center_lng + lng_offset
+        
+        # Generate business details
+        business_name = generate_business_name(search_request.query, search_request.location)
+        
+        # Generate rating
+        rating = round(random.uniform(2.0, 5.0), 1)
+        review_count = random.randint(5, 500)
+        
+        # Apply rating filter
+        if search_request.min_rating and rating < search_request.min_rating:
+            continue
+        
+        # Generate website status
+        has_website = random.choice([True, False, True, True])  # 75% chance of having website
+        
+        # Apply website filter
+        if search_request.has_website is not None and has_website != search_request.has_website:
+            continue
+        
+        # Generate address
+        street_number = random.randint(1, 9999)
+        street_name = random.choice(STREETS)
+        city_name = search_request.location.split(',')[0].strip()
+        address = f"{street_number} {street_name}, {city_name}"
+        
+        # Generate phone
+        phone = f"({random.randint(200, 999)}) {random.randint(200, 999)}-{random.randint(1000, 9999)}"
+        
+        # Generate website
+        website = None
+        if has_website:
+            domain_name = business_name.lower().replace(" ", "").replace("'", "").replace("&", "and")[:15]
+            website = f"https://www.{domain_name}.com"
+        
+        business = BusinessLead(
+            name=business_name,
+            address=address,
+            phone=phone,
+            website=website,
+            google_maps_url=f"https://maps.google.com/maps?q={business_lat},{business_lng}",
+            rating=rating,
+            review_count=review_count,
+            has_website=has_website,
+            latitude=business_lat,
+            longitude=business_lng
+        )
+        
+        businesses.append(business)
+    
+    return businesses[:25]  # Limit to 25 results
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
@@ -87,67 +267,26 @@ async def get_status_checks():
 @api_router.post("/search", response_model=SearchResponse)
 async def search_businesses(search_request: SearchRequest):
     try:
-        # Initialize Google Maps client
-        gmaps = googlemaps.Client(key=GOOGLE_MAPS_API_KEY)
+        logger.info(f"Searching for '{search_request.query}' in '{search_request.location}'")
         
-        # First, geocode the location to get coordinates
-        geocode_result = gmaps.geocode(search_request.location)
-        if not geocode_result:
-            raise HTTPException(status_code=400, detail="Location not found")
+        # Generate mock businesses
+        leads = generate_mock_businesses(search_request)
         
-        location_coords = geocode_result[0]['geometry']['location']
-        
-        # Perform places search
-        places_result = gmaps.places_nearby(
-            location=location_coords,
-            radius=search_request.radius,
-            keyword=search_request.query,
-            type="establishment"
-        )
-        
-        leads = []
-        for place in places_result.get('results', []):
-            # Get detailed place information
-            place_details = gmaps.place(
-                place_id=place['place_id'],
-                fields=['name', 'formatted_address', 'formatted_phone_number', 'website', 'rating', 'user_ratings_total', 'geometry']
-            )
-            
-            place_info = place_details.get('result', {})
-            
-            # Apply filters
-            if search_request.min_rating and place_info.get('rating', 0) < search_request.min_rating:
-                continue
-                
-            has_website = bool(place_info.get('website'))
-            if search_request.has_website is not None and has_website != search_request.has_website:
-                continue
-            
-            # Create business lead
-            lead = BusinessLead(
-                name=place_info.get('name', 'Unknown'),
-                address=place_info.get('formatted_address', ''),
-                phone=place_info.get('formatted_phone_number'),
-                website=place_info.get('website'),
-                google_maps_url=f"https://maps.google.com/maps?cid={place.get('place_id', '')}",
-                rating=place_info.get('rating'),
-                review_count=place_info.get('user_ratings_total'),
-                has_website=has_website,
-                latitude=place_info.get('geometry', {}).get('location', {}).get('lat', 0),
-                longitude=place_info.get('geometry', {}).get('location', {}).get('lng', 0)
-            )
-            leads.append(lead)
+        # Get search center coordinates
+        center_lat, center_lng = get_location_coordinates(search_request.location)
         
         # Save leads to database
         for lead in leads:
             await db.business_leads.insert_one(lead.dict())
             
+        logger.info(f"Generated {len(leads)} business leads")
+        
         return SearchResponse(
             leads=leads,
             total_count=len(leads),
             search_center={
-                "lat": location_coords['lat'],
-                "lng": location_coords['lng'],
+                "lat": center_lat,
+                "lng": center_lng,
                 "address": search_request.location
             }
         )
