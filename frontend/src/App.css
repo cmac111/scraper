@@ -278,6 +278,26 @@ input:checked + .theme-slider:before {
   transform: translateX(26px);
 }
 
+/* Custom map marker styles */
+.custom-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+}
+
+.leaflet-popup-content {
+  margin: 8px 12px;
+  line-height: 1.4;
+}
+
+/* Map container styling */
+.leaflet-container {
+  font-family: 'Inter', sans-serif;
+}
+
 /* Custom range slider */
 input[type="range"] {
   -webkit-appearance: none;
