@@ -66,46 +66,41 @@ class SearchResponse(BaseModel):
 
 # Business name generators by category
 BUSINESS_TEMPLATES = {
-    "restaurants": [
-        "{location} Grill", "{location} Bistro", "The {adjective} Kitchen", "{name}'s Restaurant",
-        "{location} Diner", "Taste of {location}", "{adjective} Eats", "{name}'s Cafe",
-        "{location} Pizza", "Golden {food} Restaurant", "{adjective} {food} House"
+    "restaurant": [
+        "{location} Family Restaurant", "{name}'s Diner", "The {adjective} Table",
+        "{location} Grill & Bar", "{cuisine} Kitchen", "{name}'s Bistro",
+        "{location} Steakhouse", "Corner Cafe", "{adjective} Eats"
     ],
-    "plumbers": [
-        "{location} Plumbing", "{name} Plumbing Services", "Quick Fix Plumbing", 
-        "{adjective} Drain Solutions", "{location} Water Works", "Pro Plumb {location}",
-        "{name}'s Plumbing", "Reliable Plumbing Co.", "{location} Pipe Masters"
+    "plumber": [
+        "{location} Plumbing Services", "{name} Plumbing Co.", "Quick Drain Solutions",
+        "{location} Water & Sewer", "Pro Plumbing {location}", "{name}'s Plumbing",
+        "All City Plumbing", "Emergency Plumbing Services", "Master Plumbers Inc."
     ],
-    "dentists": [
-        "{location} Dental Care", "Dr. {name} Dentistry", "{adjective} Smile Dental",
-        "{location} Family Dentist", "Bright Smile Dental", "{name} Dental Clinic",
-        "{location} Orthodontics", "Perfect Teeth Dental", "Gentle Care Dentistry"
+    "dentist": [
+        "{location} Dental Group", "Dr. {name} Family Dentistry", "{location} Smile Center",
+        "{name} Dental Care", "Bright Smile Dentistry", "Family Dental Practice",
+        "{location} Orthodontics", "Complete Dental Care", "Gentle Dental"
     ],
-    "lawyers": [
-        "{name} Law Firm", "{location} Legal Services", "{adjective} Legal Associates",
-        "{name} & Partners", "{location} Law Office", "Justice Law Firm",
-        "{name} Attorney at Law", "Legal Solutions {location}", "Premier Law Group"
+    "lawyer": [
+        "{name} Law Offices", "{location} Legal Group", "{name} & Associates",
+        "{location} Law Firm", "Legal Aid Services", "{name} Attorney at Law",
+        "Downtown Legal Services", "Family Law Center", "Personal Injury Lawyers"
     ],
-    "hair salons": [
-        "{location} Hair Studio", "{adjective} Salon", "{name}'s Hair Design",
-        "Styling Station", "{location} Beauty Bar", "Hair Masters", "Chic Cuts",
-        "{adjective} Hair Lounge", "Glamour Salon", "{name}'s Styling"
+    "hair salon": [
+        "{location} Hair Studio", "Salon {name}", "{adjective} Hair Design",
+        "Style & Cut", "{location} Beauty Salon", "Hair Masters",
+        "Elegance Salon", "Trendy Cuts", "Hair Lounge"
     ],
     "auto repair": [
-        "{location} Auto Repair", "{name}'s Garage", "Quick Fix Auto", 
-        "{adjective} Motors", "{location} Car Care", "Pro Auto Service",
-        "Reliable Auto Repair", "{name} Automotive", "{location} Auto Works"
-    ],
-    "coffee shops": [
-        "{location} Coffee Co.", "The {adjective} Bean", "{name}'s Cafe",
-        "Daily Grind Coffee", "{location} Roasters", "Brew House",
-        "{adjective} Coffee", "Steam & Bean", "Corner Cafe"
+        "{location} Auto Service", "{name}'s Garage", "Complete Auto Care",
+        "{location} Motors", "Auto Repair Plus", "Pro Automotive",
+        "Quick Lube & Repair", "All Makes Auto Service", "City Auto Shop"
     ]
 }
 
-ADJECTIVES = ["Premium", "Elite", "Professional", "Quality", "Expert", "Superior", "Advanced", "Modern", "Classic", "Reliable"]
-NAMES = ["Johnson", "Smith", "Williams", "Brown", "Davis", "Miller", "Wilson", "Moore", "Taylor", "Anderson", "Thomas", "Jackson", "White", "Harris", "Martin", "Thompson", "Garcia", "Martinez", "Robinson", "Clark"]
-STREETS = ["Main St", "Oak Ave", "Pine St", "Maple Dr", "Cedar Ln", "Elm St", "Park Ave", "First St", "Second Ave", "Third St", "King St", "Queen St", "Church St", "Mill St", "High St"]
+ADJECTIVES = ["Premium", "Professional", "Quality", "Expert", "Modern", "Classic"]
+NAMES = ["Johnson", "Smith", "Williams", "Brown", "Davis", "Miller", "Wilson"]
+STREETS = ["Main St", "Oak Ave", "Pine St", "King St", "Queen St", "First Ave", "Second St", "Park Rd"]
 
 # Location coordinates (lat, lng) for major cities
 CITY_COORDINATES = {
