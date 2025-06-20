@@ -242,5 +242,7 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Implemented complete Google Maps Scraper application with React frontend and FastAPI backend. Key features include: interactive Google Maps with business markers, comprehensive search filters, dark/light mode, expandable sidebar, results table, and CSV export. Used Google Maps API key provided by user. Ready for comprehensive testing of both backend API endpoints and frontend functionality."
+  - agent: "main"
+    message: "UPDATED: Replaced Google Maps with OpenStreetMap using Leaflet.js due to API key issues. Now using free, no-API-key-required mapping solution with custom markers (green for businesses with websites, red for businesses without). All functionality preserved including interactive map, markers, popups, and dark mode styling."
   - agent: "testing"
     message: "Completed backend API testing. All backend endpoints are correctly implemented and structured. The Google Maps API key is not authorized for use with the Places API, which is an external configuration issue, not a code implementation problem. The /api/search endpoint structure is correct and accepts all required parameters. The leads management endpoints (GET /api/leads and DELETE /api/leads) are working properly with MongoDB integration. Created and ran comprehensive backend tests in backend_test.py."
