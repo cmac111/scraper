@@ -20,156 +20,117 @@ const App = () => {
   
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
-  const markersRef = useRef([]);
+  const markersLayerRef = useRef(null);
 
   const businessCategories = [
     'Restaurants', 'Retail', 'Services', 'Healthcare', 'Automotive',
     'Beauty & Wellness', 'Real Estate', 'Legal', 'Financial', 'Education'
   ];
 
-  // Initialize Google Maps
+  // Initialize Leaflet Map
   useEffect(() => {
     const initMap = () => {
-      if (mapRef.current && window.google) {
-        mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
-          center: { lat: 43.6532, lng: -79.3832 }, // Toronto default
-          zoom: 11,
-          styles: darkMode ? [
-            { elementType: "geometry", stylers: [{ color: "#1f2937" }] },
-            { elementType: "labels.text.stroke", stylers: [{ color: "#1f2937" }] },
-            { elementType: "labels.text.fill", stylers: [{ color: "#f9fafb" }] },
-            {
-              featureType: "administrative.locality",
-              elementType: "labels.text.fill",
-              stylers: [{ color: "#d1d5db" }]
-            },
-            {
-              featureType: "poi",
-              elementType: "labels.text.fill",
-              stylers: [{ color: "#d1d5db" }]
-            },
-            {
-              featureType: "poi.park",
-              elementType: "geometry",
-              stylers: [{ color: "#374151" }]
-            },
-            {
-              featureType: "poi.park",
-              elementType: "labels.text.fill",
-              stylers: [{ color: "#9ca3af" }]
-            },
-            {
-              featureType: "road",
-              elementType: "geometry",
-              stylers: [{ color: "#374151" }]
-            },
-            {
-              featureType: "road",
-              elementType: "geometry.stroke",
-              stylers: [{ color: "#1f2937" }]
-            },
-            {
-              featureType: "road",
-              elementType: "labels.text.fill",
-              stylers: [{ color: "#f9fafb" }]
-            },
-            {
-              featureType: "road.highway",
-              elementType: "geometry",
-              stylers: [{ color: "#4b5563" }]
-            },
-            {
-              featureType: "road.highway",
-              elementType: "geometry.stroke",
-              stylers: [{ color: "#1f2937" }]
-            },
-            {
-              featureType: "road.highway",
-              elementType: "labels.text.fill",
-              stylers: [{ color: "#f9fafb" }]
-            },
-            {
-              featureType: "transit",
-              elementType: "geometry",
-              stylers: [{ color: "#374151" }]
-            },
-            {
-              featureType: "transit.station",
-              elementType: "labels.text.fill",
-              stylers: [{ color: "#d1d5db" }]
-            },
-            {
-              featureType: "water",
-              elementType: "geometry",
-              stylers: [{ color: "#111827" }]
-            },
-            {
-              featureType: "water",
-              elementType: "labels.text.fill",
-              stylers: [{ color: "#9ca3af" }]
-            },
-            {
-              featureType: "water",
-              elementType: "labels.text.stroke",
-              stylers: [{ color: "#1f2937" }]
-            }
-          ] : []
+      if (mapRef.current && window.L) {
+        // Remove existing map if it exists
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.remove();
+        }
+
+        // Create new map
+        mapInstanceRef.current = window.L.map(mapRef.current, {
+          center: [43.6532, -79.3832], // Toronto default
+          zoom: 11
         });
+
+        // Add tile layer based on theme
+        const tileLayer = darkMode ? 
+          window.L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+          }) :
+          window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 20
+          });
+
+        tileLayer.addTo(mapInstanceRef.current);
+
+        // Create markers layer
+        markersLayerRef.current = window.L.layerGroup().addTo(mapInstanceRef.current);
       }
     };
 
-    if (window.google) {
-      initMap();
-    } else {
+    // Load Leaflet CSS and JS
+    if (!window.L) {
+      // Add CSS
+      const cssLink = document.createElement('link');
+      cssLink.rel = 'stylesheet';
+      cssLink.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      cssLink.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+      cssLink.crossOrigin = '';
+      document.head.appendChild(cssLink);
+
+      // Add JS
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+      script.crossOrigin = '';
       script.onload = initMap;
       document.head.appendChild(script);
+    } else {
+      initMap();
     }
   }, [darkMode]);
 
   // Clear existing markers
   const clearMarkers = () => {
-    markersRef.current.forEach(marker => marker.setMap(null));
-    markersRef.current = [];
+    if (markersLayerRef.current) {
+      markersLayerRef.current.clearLayers();
+    }
   };
 
   // Add markers for leads
   const addMarkers = (leadsData) => {
-    if (!mapInstanceRef.current) return;
+    if (!mapInstanceRef.current || !markersLayerRef.current) return;
     
     clearMarkers();
     
     leadsData.forEach(lead => {
-      const marker = new window.google.maps.Marker({
-        position: { lat: lead.latitude, lng: lead.longitude },
-        map: mapInstanceRef.current,
-        title: lead.name,
-        icon: {
-          url: lead.has_website ? 
-            'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%2310b981"><path d="M12 0c-4.198 0-8 3.403-8 7.602 0 4.198 3.469 9.21 8 16.398 4.531-7.188 8-12.2 8-16.398 0-4.199-3.801-7.602-8-7.602zm0 11c-1.657 0-3-1.343-3-3s1.343-3 3-3 3 1.343 3 3-1.343 3-3 3z"/></svg>' :
-            'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%23ef4444"><path d="M12 0c-4.198 0-8 3.403-8 7.602 0 4.198 3.469 9.21 8 16.398 4.531-7.188 8-12.2 8-16.398 0-4.199-3.801-7.602-8-7.602zm0 11c-1.657 0-3-1.343-3-3s1.343-3 3-3 3 1.343 3 3-1.343 3-3 3z"/></svg>',
-          scaledSize: new window.google.maps.Size(30, 30)
-        }
+      // Create custom icon based on website status
+      const iconHtml = lead.has_website ? 
+        `<div style="background-color: #10b981; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">✓</div>` :
+        `<div style="background-color: #ef4444; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">✗</div>`;
+
+      const customIcon = window.L.divIcon({
+        html: iconHtml,
+        iconSize: [25, 25],
+        iconAnchor: [12, 12],
+        popupAnchor: [0, -12],
+        className: 'custom-marker'
       });
 
-      const infoWindow = new window.google.maps.InfoWindow({
-        content: `
-          <div class="p-2">
-            <h3 class="font-bold">${lead.name}</h3>
-            <p class="text-sm">${lead.address}</p>
-            ${lead.phone ? `<p class="text-sm">📞 ${lead.phone}</p>` : ''}
-            ${lead.website ? `<p class="text-sm">🌐 <a href="${lead.website}" target="_blank" class="text-blue-600">Website</a></p>` : ''}
-            ${lead.rating ? `<p class="text-sm">⭐ ${lead.rating} (${lead.review_count} reviews)</p>` : ''}
-          </div>
-        `
-      });
+      const marker = window.L.marker([lead.latitude, lead.longitude], { 
+        icon: customIcon 
+      }).addTo(markersLayerRef.current);
 
-      marker.addListener('click', () => {
-        infoWindow.open(mapInstanceRef.current, marker);
-      });
+      // Create popup content
+      const popupContent = `
+        <div style="max-width: 250px; font-family: Inter, sans-serif;">
+          <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1f2937;">${lead.name}</h3>
+          <p style="margin: 4px 0; font-size: 14px; color: #6b7280;">${lead.address}</p>
+          ${lead.phone ? `<p style="margin: 4px 0; font-size: 14px; color: #6b7280;">📞 ${lead.phone}</p>` : ''}
+          ${lead.website ? `<p style="margin: 4px 0; font-size: 14px;"><a href="${lead.website}" target="_blank" style="color: #3b82f6; text-decoration: none;">🌐 Visit Website</a></p>` : ''}
+          ${lead.rating ? `<p style="margin: 4px 0; font-size: 14px; color: #6b7280;">⭐ ${lead.rating} (${lead.review_count} reviews)</p>` : ''}
+          <p style="margin: 4px 0; font-size: 12px;">
+            <span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 500; ${lead.has_website ? 'background-color: #dcfce7; color: #166534;' : 'background-color: #fee2e2; color: #991b1b;'}">
+              ${lead.has_website ? 'Has Website' : 'No Website'}
+            </span>
+          </p>
+        </div>
+      `;
 
-      markersRef.current.push(marker);
+      marker.bindPopup(popupContent);
     });
   };
 
@@ -196,16 +157,19 @@ const App = () => {
       
       // Update map center and add markers
       if (mapInstanceRef.current && response.data.search_center) {
-        mapInstanceRef.current.setCenter({
-          lat: response.data.search_center.lat,
-          lng: response.data.search_center.lng
-        });
-        mapInstanceRef.current.setZoom(12);
+        mapInstanceRef.current.setView([
+          response.data.search_center.lat,
+          response.data.search_center.lng
+        ], 12);
         addMarkers(response.data.leads);
       }
     } catch (error) {
       console.error('Search error:', error);
-      alert('Search failed. Please try again.');
+      if (error.response?.data?.detail) {
+        alert(`Search failed: ${error.response.data.detail}`);
+      } else {
+        alert('Search failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -408,6 +372,25 @@ const App = () => {
           {/* Map */}
           <div className="p-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white flex items-center">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Interactive Business Map
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <span className="inline-flex items-center mr-4">
+                    <span className="w-3 h-3 bg-green-500 rounded-full mr-1"></span>
+                    Has Website
+                  </span>
+                  <span className="inline-flex items-center">
+                    <span className="w-3 h-3 bg-red-500 rounded-full mr-1"></span>
+                    No Website
+                  </span>
+                </p>
+              </div>
               <div ref={mapRef} className="w-full h-96"></div>
             </div>
           </div>
@@ -481,6 +464,7 @@ const App = () => {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                  title="Visit Website"
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -492,6 +476,7 @@ const App = () => {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                                title="View on Google Maps"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
